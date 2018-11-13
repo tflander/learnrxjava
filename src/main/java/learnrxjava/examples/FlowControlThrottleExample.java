@@ -9,10 +9,19 @@ public class FlowControlThrottleExample {
 
     public static void main(String args[]) {
         // first item emitted in each time window
-        hotStream().throttleFirst(500, TimeUnit.MILLISECONDS).take(10).toBlocking().forEach(System.out::println);
-        
+        hotStream()
+                .throttleFirst(500, TimeUnit.MILLISECONDS)
+                .take(10)
+                .toBlocking().forEach(System.out::println);
+
+        System.out.println("");
+
         // last item emitted in each time window
-        hotStream().throttleLast(500, TimeUnit.MILLISECONDS).take(10).toBlocking().forEach(System.out::println);
+        hotStream()
+                .throttleLast(500, TimeUnit.MILLISECONDS)
+                .take(10)
+                .toBlocking()
+                .forEach(System.out::println);
     }
 
     /**

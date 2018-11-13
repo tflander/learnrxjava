@@ -8,23 +8,25 @@ public class ParallelExecution {
     public static void main(String[] args) {
         System.out.println("------------ mergingAsync");
         mergingAsync();
-        System.out.println("------------ mergingSync");
-        mergingSync();
-        System.out.println("------------ mergingSyncMadeAsync");
-        mergingSyncMadeAsync();
-        System.out.println("------------ flatMapExampleSync");
-        flatMapExampleSync();
-        System.out.println("------------ flatMapExampleAsync");
-        flatMapExampleAsync();
-        System.out.println("------------ flatMapBufferedExampleAsync");
-        flatMapBufferedExampleAsync();
-        System.out.println("------------ flatMapWindowedExampleAsync");
-        flatMapWindowedExampleAsync();
-        System.out.println("------------");
+//        System.out.println("------------ mergingSync");
+//        mergingSync();
+//        System.out.println("------------ mergingSyncMadeAsync");
+//        mergingSyncMadeAsync();
+//        System.out.println("------------ flatMapExampleSync");
+//        flatMapExampleSync();
+//        System.out.println("------------ flatMapExampleAsync");
+//        flatMapExampleAsync();
+//        System.out.println("------------ flatMapBufferedExampleAsync");
+//        flatMapBufferedExampleAsync();
+//        System.out.println("------------ flatMapWindowedExampleAsync");
+//        flatMapWindowedExampleAsync();
+//        System.out.println("------------");
     }
 
     private static void mergingAsync() {
-        Observable.merge(getDataAsync(1), getDataAsync(2)).toBlocking().forEach(System.out::println);
+        Observable.merge(
+                getDataAsync(1), getDataAsync(2)
+        ).toBlocking().forEach(System.out::println);
     }
 
     private static void mergingSync() {

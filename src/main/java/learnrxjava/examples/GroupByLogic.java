@@ -12,7 +12,7 @@ public class GroupByLogic {
     public static void main(String[] args) {
         final TestScheduler testScheduler = Schedulers.test();
         final PublishSubject<PlayEvent> testSubject = PublishSubject.<PlayEvent> create();
-        TestSubscriber<StreamState> ts = new TestSubscriber<StreamState>();
+        TestSubscriber<StreamState> ts = new TestSubscriber<>();
 
         testSubject.groupBy(playEvt -> playEvt.getOriginatorId())
                 .flatMap(groupedObservable -> {
@@ -48,22 +48,22 @@ public class GroupByLogic {
 
         testSubject.onNext(createPlayEvent(1, "b"));
         testScheduler.advanceTimeBy(2, TimeUnit.HOURS);
-
-        testSubject.onNext(createPlayEvent(1, "a"));
-        testSubject.onNext(createPlayEvent(2, "b"));
-
-        System.out.println("onNext after 4 hours: " + ts.getOnNextEvents());
-
-        testScheduler.advanceTimeBy(3, TimeUnit.HOURS);
-
-        System.out.println("onNext after 7 hours: " + ts.getOnNextEvents());
-
-        testSubject.onCompleted();
-        testSubject.onNext(createPlayEvent(2, "b"));
-
-        System.out.println("onNext after complete: " + ts.getOnNextEvents());
-        ts.assertTerminalEvent();
-        ts.assertNoErrors();
+//
+//        testSubject.onNext(createPlayEvent(1, "a"));
+//        testSubject.onNext(createPlayEvent(2, "b"));
+//
+//        System.out.println("onNext after 4 hours: " + ts.getOnNextEvents());
+//
+//        testScheduler.advanceTimeBy(3, TimeUnit.HOURS);
+//
+//        System.out.println("onNext after 7 hours: " + ts.getOnNextEvents());
+//
+//        testSubject.onCompleted();
+//        testSubject.onNext(createPlayEvent(2, "b"));
+//
+//        System.out.println("onNext after complete: " + ts.getOnNextEvents());
+//        ts.assertTerminalEvent();
+//        ts.assertNoErrors();
     }
 
     public static PlayEvent createPlayEvent(int id, String v) {

@@ -7,12 +7,14 @@ import rx.Subscriber;
 
 public class ConditionalRetry {
 
+    public static final int MAX_RETRIES = 3;
+
     public static void main(String[] args) {
 
         final AtomicInteger c = new AtomicInteger();
         Observable<String> oWithRuntimeException = Observable.create((Subscriber<? super String> s) -> {
             System.out.println("Execution: " + c.get());
-            if (c.incrementAndGet() < 3) {
+            if (c.incrementAndGet() < MAX_RETRIES) {
                 s.onError(new RuntimeException("retryable"));
             } else {
                 s.onNext("hello");
@@ -23,7 +25,7 @@ public class ConditionalRetry {
         final AtomicInteger c2 = new AtomicInteger();
         Observable<String> oWithIllegalStateException = Observable.create((Subscriber<? super String> s) -> {
             System.out.println("Execution: " + c2.get());
-            if (c2.incrementAndGet() < 3) {
+            if (c2.incrementAndGet() < MAX_RETRIES) {
                 s.onError(new RuntimeException("retryable"));
             } else {
                 s.onError(new IllegalStateException());

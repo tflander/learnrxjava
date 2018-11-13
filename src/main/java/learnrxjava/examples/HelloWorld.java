@@ -4,6 +4,8 @@ import java.util.concurrent.TimeUnit;
 import rx.Observable;
 import rx.Observable.OnSubscribe;
 import rx.Subscriber;
+import rx.Subscription;
+import rx.exceptions.OnErrorNotImplementedException;
 import rx.schedulers.Schedulers;
 
 public class HelloWorld {
@@ -15,14 +17,16 @@ public class HelloWorld {
             subscriber.onNext("Hello World!");
             subscriber.onCompleted();
         }).subscribe(System.out::println);
-
         // shorten by using helper method
-        Observable.just("Hello", "World!")
-                .subscribe(System.out::println);
+        Observable<String> foo = Observable.just("Hello", "World!");
+
+                foo.subscribe(x -> {
+                    System.out.println("called " + x);
+                });
 
         // add onError and onComplete listeners
         Observable.just("Hello World!")
-                .subscribe(System.out::println,
+                .subscribe(str -> {throw new IllegalStateException("force error");},
                         Throwable::printStackTrace,
                         () -> System.out.println("Done"));
 
@@ -59,12 +63,15 @@ public class HelloWorld {
             try {
                 subscriber.onNext("Hello World!");
                 subscriber.onCompleted();
-            } catch (Exception e) {
-                subscriber.onError(e);
+            } catch (OnErrorNotImplementedException e) {
+                System.out.println("whoops");
+//                subscriber.onError(e);
+                e.printStackTrace();
             }
-        }).subscribe(System.out::println);
+        }).subscribe(str -> {throw new IllegalStateException("forced");});
 
         // add concurrency (manually)
+        System.out.println(getData());
         Observable.create(subscriber -> {
             new Thread(() -> {
                 try {
@@ -74,7 +81,9 @@ public class HelloWorld {
                     subscriber.onError(e);
                 }
             }).start();
-        }).subscribe(System.out::println);
+        }).subscribe(System.out::println, Throwable::printStackTrace, () -> {
+            System.out.println("Done");
+        });
 
         // add concurrency (using a Scheduler)
         Observable.create(subscriber -> {
@@ -96,7 +105,8 @@ public class HelloWorld {
                 subscriber.onError(e);
             }
         }).subscribeOn(Schedulers.io())
-                .map(data -> data + " --> at " + System.currentTimeMillis())
+                .map(data -> ((String)data).length())
+//                .map(data -> data + " --> at " + System.currentTimeMillis())
                 .subscribe(System.out::println);
 
         // add error handling
@@ -109,6 +119,23 @@ public class HelloWorld {
             }
         }).subscribeOn(Schedulers.io())
                 .map(data -> data + " --> at " + System.currentTimeMillis())
+                .onErrorResumeNext(e -> Observable.just("Fallback Data"))
+                .subscribe(System.out::println);
+
+        // Todd spike
+        Observable.create(subscriber -> {
+            try {
+
+                for(int i = 0; i < 22; ++i) {
+                    subscriber.onNext(getAuthTokenOrNull());
+                }
+                subscriber.onCompleted();
+            } catch (Exception e) {
+                subscriber.onError(e);
+            }
+        }).subscribeOn(Schedulers.io())
+//                .filter(data -> ((String)data).endsWith("0"))
+//                .first()
                 .onErrorResumeNext(e -> Observable.just("Fallback Data"))
                 .subscribe(System.out::println);
 
@@ -129,7 +156,7 @@ public class HelloWorld {
 
         Observable.create(subscriber -> {
             throw new RuntimeException("failed!");
-        }).onErrorResumeNext(Observable.just("fallback value"))
+        }).onErrorResumeNext(Observable.just("fallback value 1", "fallback value 2"))
                 .subscribe(System.out::println);
 
         Observable.create(subscriber -> {
@@ -156,8 +183,14 @@ public class HelloWorld {
         }
     }
 
+    private static String getAuthTokenOrNull() {
+        System.out.println(".");
+        return Thread.currentThread().getName() + " " + Math.round(Math.random() * 3);
+    }
+
     private static String getData() {
-        return "Got Data!";
+//        throw new IllegalStateException("force");
+        return Thread.currentThread().getName() + " Got Data!";
     }
 
 }

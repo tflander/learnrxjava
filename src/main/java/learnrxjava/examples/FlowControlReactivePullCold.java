@@ -13,7 +13,11 @@ import rx.schedulers.Schedulers;
 public class FlowControlReactivePullCold {
 
     public static void main(String[] args) {
-        getData(1).observeOn(Schedulers.computation()).toBlocking().forEach(System.out::println);
+        getData(1)
+                .take(10)
+                .observeOn(Schedulers.computation())
+                .toBlocking()
+                .forEach(System.out::println);
     }
 
     /**
@@ -23,6 +27,7 @@ public class FlowControlReactivePullCold {
         // simulate a finite, cold data source
         final ArrayList<Integer> data = new ArrayList<Integer>();
         for (int i = 0; i < 5000; i++) {
+            System.out.println("generating " + i);
             data.add(i + id);
         }
         return fromIterable(data);

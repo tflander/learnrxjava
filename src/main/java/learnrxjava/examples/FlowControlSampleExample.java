@@ -8,7 +8,10 @@ import rx.schedulers.Schedulers;
 public class FlowControlSampleExample {
 
     public static void main(String args[]) {
-        hotStream().sample(500, TimeUnit.MILLISECONDS).toBlocking().forEach(System.out::println);
+        hotStream()
+                .sample(500, TimeUnit.MILLISECONDS)
+                .toBlocking()
+                .forEach(System.out::println);
     }
 
     /**

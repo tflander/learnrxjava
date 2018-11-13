@@ -1,33 +1,38 @@
 package learnrxjava.examples;
 import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Predicate;
 
 import rx.Observable;
+import rx.functions.Func1;
 
 public class GroupByExamples {
 
     public static void main(String args[]) {
-        // odd/even into 2 lists
+
+        Func1<Integer, Boolean> isEven = n -> (n % 2 == 0);
+
         Observable.range(1, 100)
-                .groupBy(n -> n % 2 == 0)
+                .groupBy(isEven)
                 .flatMap(g -> {
                     return g.toList();
-                }).forEach(System.out::println);
+                })
+                .forEach(System.out::println);
 
         System.out.println("2--------------------------------------------------------------------------------------------------------");
 
         // odd/even into lists of 10
         Observable.range(1, 100)
-                .groupBy(n -> n % 2 == 0)
+                .groupBy(isEven)
                 .flatMap(g -> {
                     return g.take(10).toList();
                 }).forEach(System.out::println);
 
         System.out.println("3--------------------------------------------------------------------------------------------------------");
 
-        //odd/even into lists of 10
+        //odd/even into two lists where i <= 20
         Observable.range(1, 100)
-                .groupBy(n -> n % 2 == 0)
+                .groupBy(isEven)
                 .flatMap(g -> {
                     return g.filter(i -> i <= 20).toList();
                 }).forEach(System.out::println);
