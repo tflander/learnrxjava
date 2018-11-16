@@ -74,7 +74,7 @@ class AuthTests {
 
 object AsyncAuthSpike {
 
-    fun multiSubScribe(mockAuthRequests: List<AuthRequest>): AuthResponse {
+    fun multiSubScribe(mockAuthRequests: List<AuthRequest>): DeprecatedAuthResponse {
 
         val bar = launchAuthRequestsInSeparateThreads(mockAuthRequests)
                 .filter { authResponse -> (authResponse.success || !authResponse.isOnLine) }
@@ -93,14 +93,14 @@ object AsyncAuthSpike {
         }
 
         if (downCount == 0) {
-            return AuthResponse(false, "Token invalid for all Auth Servers", isOnLine = true)
+            return DeprecatedAuthResponse(false, "Token invalid for all Auth Servers", isOnLine = true)
         } else {
-            return AuthResponse(false, "Token invalid, but " + downCount + " server(s) were down", isOnLine = false)
+            return DeprecatedAuthResponse(false, "Token invalid, but " + downCount + " server(s) were down", isOnLine = false)
         }
 
     }
 
-    private fun launchAuthRequestsInSeparateThreads(authRequests: List<AuthRequest>): Observable<AuthResponse> {
+    private fun launchAuthRequestsInSeparateThreads(authRequests: List<AuthRequest>): Observable<DeprecatedAuthResponse> {
         return Observable.merge(
                 authRequests.map { authRequest ->
                     createAuthObservableWithDelay(authRequest).subscribeOn(Schedulers.io())
@@ -108,7 +108,7 @@ object AsyncAuthSpike {
 
     }
 
-    private fun createAuthObservableWithDelay(authRequest: AuthRequest): Observable<AuthResponse> {
+    private fun createAuthObservableWithDelay(authRequest: AuthRequest): Observable<DeprecatedAuthResponse> {
         return Observable.create { subscriber ->
             try {
                 println("calling auth against ${authRequest.serverName}...")
@@ -118,7 +118,7 @@ object AsyncAuthSpike {
                 //  Likely because we found the correct auth server already
             }
 
-            subscriber.onNext(AuthResponse(success = authRequest.isCorrect, message = authRequest.serverName, isOnLine = !authRequest.isError))
+            subscriber.onNext(DeprecatedAuthResponse(success = authRequest.isCorrect, message = authRequest.serverName, isOnLine = !authRequest.isError))
             subscriber.onCompleted()
         }
     }

@@ -90,14 +90,14 @@ object GenericAuthSpike {
                 throw IllegalStateException("whoops")
             }
             println("${authRequest} returned auth.")
-            AuthResponse(authRequest.isCorrect, authRequest.serverName, !authRequest.isError)
+            AuthResponse(authRequest.isCorrect, authRequest.serverName)
         }
 
         val responseForNoSuccessAndNoError: Supplier<AuthResponse> = Supplier {
-            AuthResponse(false, "Token invalid for all Auth Servers", true)
+            AuthResponse(false, "Token invalid for all Auth Servers")
         }
         val responseForNoSucessAndSomeErrors: Function<Int, AuthResponse> = Function { errorCount ->
-            AuthResponse(false, "Token invalid, but " + errorCount + " server(s) were down", true)
+            AuthResponse(false, "Token invalid, but " + errorCount + " server(s) were down")
         }
 
 
