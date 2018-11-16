@@ -17,13 +17,13 @@ class FluentGenericAuthTests {
     fun `gets token from right server and doesn't wait for slow server`() {
 
         val startTime = Date().time
-        val theCorrectServerIsDown = listOf<AuthRequest>(
+        val theCorrectServerIsUpAndHaveSlowServer = listOf<AuthRequest>(
                 AuthRequest("Slow and Wrong Server A", 6000, false),
                 AuthRequest("Medium Fast and Correct Server B", 300, true),
                 AuthRequest("Fast and Wrong Server C", 30, false)
         )
 
-        val authResponse = FluentGenericAuthSpike.multiSubScribe(theCorrectServerIsDown)
+        val authResponse = FluentGenericAuthSpike.multiSubScribe(theCorrectServerIsUpAndHaveSlowServer)
         assertEquals("Medium Fast and Correct Server B", authResponse.message)
         val elapsed = Date().time - startTime
         Assert.assertTrue("expected < 1500ms, took" + elapsed, elapsed < 1500)
@@ -33,13 +33,13 @@ class FluentGenericAuthTests {
     fun `fails when all servers are up and the token doesn't match any of them`() {
 
         val startTime = Date().time
-        val theCorrectServerIsDown = listOf<AuthRequest>(
+        val tokenBadForAllServers = listOf<AuthRequest>(
                 AuthRequest("Slow and Wrong Server A", 3000, false),
                 AuthRequest("Medium Fast and Wrong Server B", 300, false),
                 AuthRequest("Fast and Wrong Server C", 30, false)
         )
 
-        val authResponse = FluentGenericAuthSpike.multiSubScribe(theCorrectServerIsDown)
+        val authResponse = FluentGenericAuthSpike.multiSubScribe(tokenBadForAllServers)
         assertEquals("Token invalid for all Auth Servers", authResponse.message)
         Assert.assertTrue(Date().time - startTime > 3000)
     }
@@ -61,14 +61,14 @@ class FluentGenericAuthTests {
     fun `returns token when servers are down, but the one with the token passed is up`() {
 
         val startTime = Date().time
-        val theCorrectServerIsDown = listOf<AuthRequest>(
+        val incorrectServersAreDown = listOf<AuthRequest>(
                 AuthRequest("fast and Down Server A", 60, false, isError = true),
                 AuthRequest("Medium Fast and Correct Server B", 300, true),
                 AuthRequest("Fast and Wrong Server C", 30, false, isError = true),
                 AuthRequest("Slow and Wrong Server D", 3000, false, isError = true)
                 )
 
-        val authResponse = FluentGenericAuthSpike.multiSubScribe(theCorrectServerIsDown)
+        val authResponse = FluentGenericAuthSpike.multiSubScribe(incorrectServersAreDown)
         assertEquals("Medium Fast and Correct Server B", authResponse.message)
         val elapsed = Date().time - startTime
         Assert.assertTrue("expected < 1500, took " + elapsed, elapsed < 1500)

@@ -15,13 +15,13 @@ class AuthTests {
     fun `gets token from right server and doesn't wait for slow server`() {
 
         val startTime = Date().time
-        val theCorrectServerIsDown = listOf<AuthRequest>(
+        val theCorrectServerIsUpAndHaveSlowServer = listOf<AuthRequest>(
                 AuthRequest("Slow and Wrong Server A", 6000, false),
                 AuthRequest("Medium Fast and Correct Server B", 300, true),
                 AuthRequest("Fast and Wrong Server C", 30, false)
         )
 
-        val authResponse = AsyncAuthSpike.multiSubScribe(theCorrectServerIsDown)
+        val authResponse = AsyncAuthSpike.multiSubScribe(theCorrectServerIsUpAndHaveSlowServer)
         assertEquals("Medium Fast and Correct Server B", authResponse.message)
         Assert.assertTrue(Date().time - startTime < 600)
     }
@@ -30,13 +30,13 @@ class AuthTests {
     fun `fails when all servers are up and the token doesn't match any of them`() {
 
         val startTime = Date().time
-        val theCorrectServerIsDown = listOf<AuthRequest>(
+        val tokenBadForAllServers = listOf<AuthRequest>(
                 AuthRequest("Slow and Wrong Server A", 3000, false),
                 AuthRequest("Medium Fast and Wrong Server B", 300, false),
                 AuthRequest("Fast and Wrong Server C", 30, false)
         )
 
-        val authResponse = AsyncAuthSpike.multiSubScribe(theCorrectServerIsDown)
+        val authResponse = AsyncAuthSpike.multiSubScribe(tokenBadForAllServers)
         assertEquals("Token invalid for all Auth Servers", authResponse.message)
         Assert.assertTrue(Date().time - startTime > 3000)
     }
@@ -58,14 +58,14 @@ class AuthTests {
     fun `returns token when servers are down, but the one with the token passed is up`() {
 
         val startTime = Date().time
-        val theCorrectServerIsDown = listOf<AuthRequest>(
+        val incorrectServersAreDown = listOf<AuthRequest>(
                 AuthRequest("fast and Down Server A", 60, false, isError = true),
                 AuthRequest("Medium Fast and Correct Server B", 300, true),
                 AuthRequest("Fast and Wrong Server C", 30, false, isError = true),
                 AuthRequest("Slow and Wrong Server D", 3000, false, isError = true)
                 )
 
-        val authResponse = AsyncAuthSpike.multiSubScribe(theCorrectServerIsDown)
+        val authResponse = AsyncAuthSpike.multiSubScribe(incorrectServersAreDown)
         assertEquals("Medium Fast and Correct Server B", authResponse.message)
         Assert.assertTrue(Date().time - startTime < 600)
     }
@@ -76,15 +76,15 @@ object AsyncAuthSpike {
 
     fun multiSubScribe(mockAuthRequests: List<AuthRequest>): DeprecatedAuthResponse {
 
-        val bar = launchAuthRequestsInSeparateThreads(mockAuthRequests)
+        val blockingRequests = launchAuthRequestsInSeparateThreads(mockAuthRequests)
                 .filter { authResponse -> (authResponse.success || !authResponse.isOnLine) }
                 .toBlocking()
 
-        var downCount = 0
-        for (response in bar.toIterable()) {
+        var serverDownCount = 0
+        for (response in blockingRequests.toIterable()) {
             println(": " + response.message)
             if (!response.isOnLine) {
-                ++downCount
+                ++serverDownCount
             } else {
                 if (response.success) {
                     return response
@@ -92,10 +92,10 @@ object AsyncAuthSpike {
             }
         }
 
-        if (downCount == 0) {
+        if (serverDownCount == 0) {
             return DeprecatedAuthResponse(false, "Token invalid for all Auth Servers", isOnLine = true)
         } else {
-            return DeprecatedAuthResponse(false, "Token invalid, but " + downCount + " server(s) were down", isOnLine = false)
+            return DeprecatedAuthResponse(false, "Token invalid, but " + serverDownCount + " server(s) were down", isOnLine = false)
         }
 
     }
@@ -103,12 +103,12 @@ object AsyncAuthSpike {
     private fun launchAuthRequestsInSeparateThreads(authRequests: List<AuthRequest>): Observable<DeprecatedAuthResponse> {
         return Observable.merge(
                 authRequests.map { authRequest ->
-                    createAuthObservableWithDelay(authRequest).subscribeOn(Schedulers.io())
+                    observeAuthRequestProcessing(authRequest).subscribeOn(Schedulers.io())
                 })
 
     }
 
-    private fun createAuthObservableWithDelay(authRequest: AuthRequest): Observable<DeprecatedAuthResponse> {
+    private fun observeAuthRequestProcessing(authRequest: AuthRequest): Observable<DeprecatedAuthResponse> {
         return Observable.create { subscriber ->
             try {
                 println("calling auth against ${authRequest.serverName}...")
