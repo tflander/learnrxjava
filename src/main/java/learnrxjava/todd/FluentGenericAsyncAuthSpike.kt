@@ -23,7 +23,7 @@ class FluentGenericAuthTests {
                 AuthRequest("Fast and Wrong Server C", 30, false)
         )
 
-        val authResponse = GenericAuthSpike.multiSubScribe(theCorrectServerIsDown)
+        val authResponse = FluentGenericAuthSpike.multiSubScribe(theCorrectServerIsDown)
         assertEquals("Medium Fast and Correct Server B", authResponse.message)
         val elapsed = Date().time - startTime
         Assert.assertTrue("expected < 1500ms, took" + elapsed, elapsed < 1500)
@@ -39,7 +39,7 @@ class FluentGenericAuthTests {
                 AuthRequest("Fast and Wrong Server C", 30, false)
         )
 
-        val authResponse = GenericAuthSpike.multiSubScribe(theCorrectServerIsDown)
+        val authResponse = FluentGenericAuthSpike.multiSubScribe(theCorrectServerIsDown)
         assertEquals("Token invalid for all Auth Servers", authResponse.message)
         Assert.assertTrue(Date().time - startTime > 3000)
     }
@@ -53,7 +53,7 @@ class FluentGenericAuthTests {
                 AuthRequest("Fast and Wrong Server C", 30, false)
         )
 
-        val authResponse = GenericAuthSpike.multiSubScribe(theCorrectServerIsDown)
+        val authResponse = FluentGenericAuthSpike.multiSubScribe(theCorrectServerIsDown)
         assertEquals("Token invalid, but 1 server(s) were down", authResponse.message)
     }
 
@@ -68,7 +68,7 @@ class FluentGenericAuthTests {
                 AuthRequest("Slow and Wrong Server D", 3000, false, isError = true)
                 )
 
-        val authResponse = GenericAuthSpike.multiSubScribe(theCorrectServerIsDown)
+        val authResponse = FluentGenericAuthSpike.multiSubScribe(theCorrectServerIsDown)
         assertEquals("Medium Fast and Correct Server B", authResponse.message)
         val elapsed = Date().time - startTime
         Assert.assertTrue("expected < 1500, took " + elapsed, elapsed < 1500)
@@ -101,26 +101,59 @@ object FluentGenericAuthSpike {
         }
 
 
-        val flow = FirstSuccessFulResponseFlow(
-                isSuccess, processAuthRequest, responseForNoSuccessAndNoError, responseForNoSucessAndSomeErrors
-        )
+//        val flow = FirstSuccessFulResponseFlow(
+//                isSuccess, processAuthRequest, responseForNoSuccessAndNoError, responseForNoSucessAndSomeErrors
+//        )
+//
+//        return flow.multiSubScribe(mockAuthRequests)
 
-        return flow.multiSubScribe(mockAuthRequests)
+        return FirstSuccessfulResponseFlow<AuthRequest, AuthResponse>()
+                .processParallelRequests(mockAuthRequests)
+                .abortWhenFirstRequestPasses(isSuccess)
+                .executeForEachRequestInSeparateThread(processAuthRequest)
+                .whenNoSuccessAndNoErrorsThenRespond(responseForNoSuccessAndNoError)
+                .whenNoSucessAndSomeErrorsThenRespond(responseForNoSucessAndSomeErrors)
+                .execute()
     }
 
 }
 
-class FirstSuccessFulResponseFlow<T, R>(
-        val isSuccess: Predicate<R>,
-        val executeRequest: Function<T, R>,
-        val responseForNoSuccessAndNoError: Supplier<R>,
-        val responseForNoSucessAndSomeErrors: Function<Int, R>
+class FirstSuccessfulResponseFlow<T, R> {
 
-) {
+    fun processParallelRequests(requests: List<T>): FirstSuccessfulResponseFlowRunner<T, R> {
+        return FirstSuccessfulResponseFlowRunner(requests)
+    }
+}
 
-    fun multiSubScribe(mockAuthRequests: List<T>): R {
+class FirstSuccessfulResponseFlowRunner<T, R>(val requests: List<T>) {
 
-        val bar = launchAuthRequestsInSeparateThreads(mockAuthRequests)
+    lateinit var isSuccess: Predicate<R>
+    lateinit var processFuncion: Function<T, R>
+    lateinit var responseForNoSuccessAndNoError: Supplier<R>
+    lateinit var responseForNoSucessAndSomeErrors: Function<Int, R>
+
+    fun abortWhenFirstRequestPasses(isSuccess: Predicate<R>): FirstSuccessfulResponseFlowRunner<T, R> {
+        this.isSuccess = isSuccess
+        return this
+    }
+
+    fun executeForEachRequestInSeparateThread(processFuncion: Function<T, R>): FirstSuccessfulResponseFlowRunner<T, R> {
+        this.processFuncion = processFuncion
+        return this
+    }
+
+    fun whenNoSuccessAndNoErrorsThenRespond(responseForNoSuccessAndNoError: Supplier<R>): FirstSuccessfulResponseFlowRunner<T, R> {
+        this.responseForNoSuccessAndNoError = responseForNoSuccessAndNoError
+        return this
+    }
+
+    fun whenNoSucessAndSomeErrorsThenRespond(responseForNoSucessAndSomeErrors: Function<Int, R>): FirstSuccessfulResponseFlowRunner<T, R> {
+        this.responseForNoSucessAndSomeErrors = responseForNoSucessAndSomeErrors
+        return this
+    }
+
+    fun execute(): R {
+        val bar = launchAuthRequestsInSeparateThreads(requests)
                 .filter { response ->
                     !response.isSuccess ||isSuccess.test(response.response!!)
                 }
@@ -144,7 +177,6 @@ class FirstSuccessFulResponseFlow<T, R>(
         }
 
     }
-
     private fun launchAuthRequestsInSeparateThreads(authRequests: List<T>): Observable<ResponseWrapper<R>> {
         return Observable.merge(
                 authRequests.map { authRequest ->
@@ -156,7 +188,7 @@ class FirstSuccessFulResponseFlow<T, R>(
     private fun createAuthObservableWithDelay(authRequest: T): Observable<ResponseWrapper<R>> {
         return Observable.create { subscriber ->
             try {
-                val response = executeRequest.apply(authRequest)
+                val response = processFuncion.apply(authRequest)
                 subscriber.onNext(ResponseWrapper(true, response))
             } catch (ignoreAbandoningSlowResponses: InterruptedException) {
                 //  Likely because we found the correct response already
