@@ -1,5 +1,12 @@
 package learnrxjava.todd
 
+data class AuthRequest(
+        val serverName: String,
+        val delay: Long,
+        val isCorrect: Boolean,
+        val isError: Boolean = false
+)
+
 data class DeprecatedAuthResponse(
         val success: Boolean,
         val message: String,
@@ -11,9 +18,9 @@ data class AuthResponse(
         val message: String
 )
 
-data class AuthRequest(
-        val serverName: String,
-        val delay: Long,
-        val isCorrect: Boolean,
-        val isError: Boolean = false
+data class ResponseWrapper<R>(
+        val isSuccess: Boolean,
+        val response: R?
 )
+
+

@@ -11,7 +11,7 @@ import java.util.function.Predicate
 import java.util.function.Supplier
 import java.util.function.Function
 
-class GenericAuthTests {
+class FluentGenericAuthTests {
 
     @Test
     fun `gets token from right server and doesn't wait for slow server`() {
@@ -76,7 +76,7 @@ class GenericAuthTests {
 
 }
 
-object GenericAuthSpike {
+object FluentGenericAuthSpike {
 
     fun multiSubScribe(mockAuthRequests: List<AuthRequest>): AuthResponse {
 
@@ -101,7 +101,7 @@ object GenericAuthSpike {
         }
 
 
-        val flow = DeprecatedFirstSuccessFulResponseFlow(
+        val flow = FirstSuccessFulResponseFlow(
                 isSuccess, processAuthRequest, responseForNoSuccessAndNoError, responseForNoSucessAndSomeErrors
         )
 
@@ -110,7 +110,7 @@ object GenericAuthSpike {
 
 }
 
-class DeprecatedFirstSuccessFulResponseFlow<T, R>(
+class FirstSuccessFulResponseFlow<T, R>(
         val isSuccess: Predicate<R>,
         val executeRequest: Function<T, R>,
         val responseForNoSuccessAndNoError: Supplier<R>,
