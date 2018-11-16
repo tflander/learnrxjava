@@ -90,14 +90,22 @@ object FluentGenericAuthSpike {
             AuthResponse(authRequest.isCorrect, authRequest.serverName)
         }
 
+        fun FirstSuccessfulResponseFlowRunner<AuthRequest, AuthResponse>.whenTokenInvalidAndAllAuthServersAreUp(response: Supplier<AuthResponse>): FirstSuccessfulResponseFlowRunner<AuthRequest, AuthResponse> {
+            return this.whenNoSuccessAndNoErrorsThenRespond(response)
+        }
+
+        fun FirstSuccessfulResponseFlowRunner<AuthRequest, AuthResponse>.whenTokenInvalidAndSomeAuthServersAreDown(response: Function<Int, AuthResponse>): FirstSuccessfulResponseFlowRunner<AuthRequest, AuthResponse> {
+            return this.whenNoSucessAndSomeErrorsThenRespond(response)
+        }
+
         return FirstSuccessfulResponseFlow<AuthRequest, AuthResponse>()
                 .processParallelRequests(mockAuthRequests)
                 .abortWhenFirstRequestPasses(Predicate { r -> r.success})
                 .executeForEachRequestInSeparateThread(processAuthRequest)
-                .whenNoSuccessAndNoErrorsThenRespond(Supplier {
+                .whenTokenInvalidAndAllAuthServersAreUp(Supplier {
                     AuthResponse(false, "Token invalid for all Auth Servers")
                 })
-                .whenNoSucessAndSomeErrorsThenRespond(Function { errorCount ->
+                .whenTokenInvalidAndSomeAuthServersAreDown(Function { errorCount ->
                     AuthResponse(false, "Token invalid, but " + errorCount + " server(s) were down")
                 })
                 .execute()
