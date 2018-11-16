@@ -80,11 +80,8 @@ object FluentGenericAuthSpike {
 
     fun multiSubScribe(mockAuthRequests: List<AuthRequest>): AuthResponse {
 
-        val isSuccess: Predicate<AuthResponse> = Predicate{ r -> r.success}
-
         val processAuthRequest: Function<AuthRequest, AuthResponse> = Function { authRequest ->
             println("calling " + authRequest)
-                Thread.sleep(authRequest.delay.toLong())
             Thread.sleep(authRequest.delay)
             if(authRequest.isError) {
                 throw IllegalStateException("whoops")
@@ -93,26 +90,16 @@ object FluentGenericAuthSpike {
             AuthResponse(authRequest.isCorrect, authRequest.serverName)
         }
 
-        val responseForNoSuccessAndNoError: Supplier<AuthResponse> = Supplier {
-            AuthResponse(false, "Token invalid for all Auth Servers")
-        }
-        val responseForNoSucessAndSomeErrors: Function<Int, AuthResponse> = Function { errorCount ->
-            AuthResponse(false, "Token invalid, but " + errorCount + " server(s) were down")
-        }
-
-
-//        val flow = FirstSuccessFulResponseFlow(
-//                isSuccess, processAuthRequest, responseForNoSuccessAndNoError, responseForNoSucessAndSomeErrors
-//        )
-//
-//        return flow.multiSubScribe(mockAuthRequests)
-
         return FirstSuccessfulResponseFlow<AuthRequest, AuthResponse>()
                 .processParallelRequests(mockAuthRequests)
-                .abortWhenFirstRequestPasses(isSuccess)
+                .abortWhenFirstRequestPasses(Predicate { r -> r.success})
                 .executeForEachRequestInSeparateThread(processAuthRequest)
-                .whenNoSuccessAndNoErrorsThenRespond(responseForNoSuccessAndNoError)
-                .whenNoSucessAndSomeErrorsThenRespond(responseForNoSucessAndSomeErrors)
+                .whenNoSuccessAndNoErrorsThenRespond(Supplier {
+                    AuthResponse(false, "Token invalid for all Auth Servers")
+                })
+                .whenNoSucessAndSomeErrorsThenRespond(Function { errorCount ->
+                    AuthResponse(false, "Token invalid, but " + errorCount + " server(s) were down")
+                })
                 .execute()
     }
 
